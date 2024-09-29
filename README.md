@@ -58,7 +58,7 @@ This project is a Next.js application that includes a theme toggle feature, mult
    ```
 
 3. Set up environment variables:
-   Create a `.env.local` file in the root directory and add the necessary environment variables for Stripe, Supabase, and OpenAI.
+   Create a `.env.local` file in the root directory and add the necessary environment variables for Stripe, Supabase, OpenAI, and other integrations.
 
 4. Run the development server:
    ```bash
@@ -73,5 +73,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT
+This project is licensed under the MIT License.
 
