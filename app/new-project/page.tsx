@@ -23,6 +23,7 @@ import {
 import { Sidebar } from "@/components/Sidebar"
 import { useState } from "react"
 import { AuthWrapper } from "@/components/AuthWrapper"
+import { supabase, getCurrentUser } from '@/lib/supabase'
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -30,7 +31,7 @@ export default function NewProjectPage() {
   const [framework, setFramework] = useState('')
   const [error, setError] = useState('')
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     if (!projectName.trim()) {
       setError('Please enter a project name')
       return
@@ -40,9 +41,50 @@ export default function NewProjectPage() {
       return
     }
     setError('')
-    // Here you would typically handle the actual deployment logic
-    // For now, we'll just navigate to the chat-interface
-    router.push('/chat-interface')
+
+    try {
+      // Get the current user
+      const user = await getCurrentUser()
+      if (!user) {
+        setError('User not authenticated')
+        return
+      }
+
+      console.log('Current user:', user)  // Log the user object
+
+      // Create a new project entry in Supabase
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          name: projectName,
+          framework: framework,
+          user_id: user.id,
+          created_at: new Date().toISOString()
+        })
+        .select()
+
+      if (error) {
+        console.error('Supabase error:', error)
+        throw new Error(`Supabase error: ${error.message}`)
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('No data returned from Supabase')
+      }
+
+      console.log('Project created successfully:', data)
+
+      // Here you would typically handle the actual deployment logic
+      // For now, we'll just navigate to the chat-interface
+      router.push('/chat-interface')
+    } catch (error: unknown) {
+      console.error('Error deploying project:', error)
+      if (error instanceof Error) {
+        setError(`Failed to deploy project: ${error.message}`)
+      } else {
+        setError(`Failed to deploy project: Unknown error`)
+      }
+    }
   }
 
   return (

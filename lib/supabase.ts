@@ -165,3 +165,5 @@ export const createFreeSubscription = async (userId: string) => {
 
   return { data, error }
 }
+
+console.log('Supabase client:', supabase)

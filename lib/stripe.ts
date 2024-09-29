@@ -64,3 +64,26 @@ export async function retrieveCustomer(customerId: string) {
     throw error;
   }
 }
+
+export async function createStripeCheckoutSession(priceId: string, customerId: string) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      customer: customerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: `${baseUrl}/billing?success=true`,
+      cancel_url: `${baseUrl}/billing?canceled=true`,
+    });
+    return session;
+  } catch (error) {
+    console.error('Error creating Stripe Checkout session:', error);
+    throw error;
+  }
+}

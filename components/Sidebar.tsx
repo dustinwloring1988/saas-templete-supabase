@@ -4,9 +4,19 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Plus } from "lucide-react"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { supabase } from '@/lib/supabase'
 
 export function Sidebar() {
   const router = useRouter()
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   return (
     <aside className="w-64 bg-background border-r h-screen flex flex-col">
@@ -24,7 +34,7 @@ export function Sidebar() {
         </nav>
       </div>
       <div className="p-4 flex justify-between items-center">
-        <Button variant="ghost" className="w-full justify-start" onClick={() => router.push('/')}>Log Out</Button>
+        <Button variant="ghost" className="w-full justify-start" onClick={handleLogout}>Log Out</Button>
         <ThemeToggle />
       </div>
     </aside>
