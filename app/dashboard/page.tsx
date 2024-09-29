@@ -77,50 +77,44 @@ export default function Dashboard() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
+      console.log('Attempting to delete project with id:', id);
+      const { data, error } = await supabase
         .from('projects')
         .delete()
         .eq('id', id)
-
-      if (error) {
-        throw error
-      }
-
-      setProjects(projects.filter(p => p.id !== id))
-    } catch (error) {
-      console.error('Error deleting project:', error)
-      setError('Failed to delete project. Please try again.')
-    }
-  }
-
-  const handleClone = async (project: Project) => {
-    try {
-      const user = await getCurrentUser()
-      if (!user) {
-        setError('User not authenticated')
-        return
-      }
-
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          name: `${project.name} (Copy)`,
-          user_id: user.id,
-          created_at: new Date().toISOString()
-        })
         .select()
 
       if (error) {
-        throw error
+        console.error('Supabase error:', error);
+        throw error;
       }
 
-      if (data && data[0]) {
-        setProjects([data[0], ...projects])
-      }
+      console.log('Delete operation result:', data);
+
+      setProjects(projects.filter(p => p.id !== id));
     } catch (error) {
-      console.error('Error cloning project:', error)
-      setError('Failed to clone project. Please try again.')
+      console.error('Error deleting project:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error stringified:', JSON.stringify(error));
+      setError(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error. Check console for details.'}`);
     }
+  }
+
+  const handleExportJSON = (project: Project) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(project));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", project.name + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
+  const handleExportPDF = async (project: Project) => {
+    // This is a placeholder. You'll need to implement PDF generation.
+    // You might want to use a library like jsPDF or generate the PDF on the server side.
+    console.log('Export to PDF not implemented yet');
+    alert('Export to PDF feature coming soon!');
   }
 
   const handleProjectClick = (projectId: string) => {
@@ -140,7 +134,7 @@ export default function Dashboard() {
           <ScrollArea className="h-[calc(100vh-120px)]">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {projects.map((project) => (
-                <Card key={project.id} onClick={() => handleProjectClick(project.id)} className="cursor-pointer">
+                <Card key={project.id} className="cursor-pointer">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
                       {project.name}
@@ -154,25 +148,44 @@ export default function Dashboard() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={(e) => {
-                          e.preventDefault()
-                          const newName = prompt("Enter new name", project.name)
-                          if (newName) handleRename(project.id, newName)
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newName = prompt("Enter new name for the project:", project.name);
+                          if (newName && newName !== project.name) {
+                            handleRename(project.id, newName);
+                          }
                         }}>
                           Rename
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={(e) => {
-                          e.preventDefault()
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleExportJSON(project);
+                        }}>
+                          Export to JSON
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleExportPDF(project);
+                        }}>
+                          Export to PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           if (confirm("Are you sure you want to delete this project?")) {
-                            handleDelete(project.id)
+                            handleDelete(project.id);
                           }
                         }}>
                           Delete
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={(e) => {
-                          e.preventDefault()
-                          handleClone(project)
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/chat-interface?projectId=${project.id}`);
                         }}>
-                          Clone
+                          Open Chat
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

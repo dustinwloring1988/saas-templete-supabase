@@ -74,9 +74,8 @@ export default function NewProjectPage() {
 
       console.log('Project created successfully:', data)
 
-      // Here you would typically handle the actual deployment logic
-      // For now, we'll just navigate to the chat-interface
-      router.push('/chat-interface')
+      // Navigate to the chat-interface with the project ID
+      router.push(`/chat-interface?projectId=${data[0].id}`)
     } catch (error: unknown) {
       console.error('Error deploying project:', error)
       if (error instanceof Error) {

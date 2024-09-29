@@ -1,203 +1,260 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Sidebar } from "@/components/Sidebar"
-import { SendIcon, Code2Icon, CopyIcon, CheckIcon, DownloadIcon, ChevronDownIcon, ChevronUpIcon, User } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Bot, User, Image as ImageIcon, Send, X } from 'lucide-react'
+import { Sidebar } from "@/components/Sidebar"
 import { AuthWrapper } from "@/components/AuthWrapper"
-import { useRouter, useSearchParams } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase, getCurrentUser } from '@/lib/supabase'
 
-interface Message {
-  id: number
-  content: string
+type Message = {
+  id?: string
   sender: 'user' | 'ai'
+  text: string
+  image?: string
 }
 
-interface CodeSnippet {
-  id: number
-  filename: string
-  content: string
-  language: string
-}
-
-interface ChatHistory {
-  id: string
-  messages: Message[]
-}
-
-export default function ChatInterface() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const supabase = createClientComponentClient()
-  const [chatId, setChatId] = useState<string | null>(null)
+export default function Component() {
   const [messages, setMessages] = useState<Message[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [inputMessage, setInputMessage] = useState('')
+  const [input, setInput] = useState('')
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [projectName, setProjectName] = useState('AI Chat')
+  const [projectId, setProjectId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
-    const chatIdParam = searchParams.get('id')
-    if (chatIdParam) {
-      setChatId(chatIdParam)
-      loadChatHistory(chatIdParam)
-    } else {
-      setMessages([{ id: 1, content: "Hello! I'm your AI coding assistant. How can I help you today?", sender: 'ai' }])
-      setIsLoading(false)
+    const loadProjectAndChat = async () => {
+      const user = await getCurrentUser()
+      if (!user) return
+
+      const projectId = searchParams.get('projectId')
+      console.log('Project ID from searchParams:', projectId);
+      if (projectId) {
+        setProjectId(projectId)
+        const { data: project } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', projectId)
+          .single()
+
+        if (project) {
+          setProjectName(project.name)
+        }
+
+        const { data: chatHistory } = await supabase
+          .from('ai_chat_history')
+          .select('*')
+          .match({ user_id: user.id, project_id: projectId })
+          .order('created_at', { ascending: true })
+
+        if (chatHistory) {
+          setMessages(chatHistory.map(msg => ({
+            id: msg.id,
+            sender: msg.role as 'user' | 'ai',
+            text: msg.message,
+            image: msg.image || undefined
+          })))
+        }
+      }
     }
+
+    loadProjectAndChat()
   }, [searchParams])
 
-  const loadChatHistory = async (id: string) => {
-    setIsLoading(true)
-    const { data, error } = await supabase
-      .from('ai_chat_history')
-      .select('*')
-      .eq('id', id)
-      .order('created_at', { ascending: true })
+  const handleSend = async () => {
+    if (input.trim() || pendingImage) {
+      const userMessage = input.trim();
+      await addMessage('user', userMessage, pendingImage || undefined);
+      setInput('');
+      setPendingImage(null);
 
-    if (error) {
-      console.error('Error loading chat history:', error)
-      setIsLoading(false)
-      return
-    }
+      // Simulate AI response (replace this with actual AI call later)
+      const aiResponse = "I've received your message. How can I assist you further?";
+      await addMessage('ai', aiResponse);
 
-    if (data) {
-      const formattedMessages: Message[] = data.map((msg) => ({
-        id: msg.id,
-        content: msg.message,
-        sender: msg.role as 'user' | 'ai'
-      }))
-      setMessages(formattedMessages)
+      // Save both user message and AI response to the database
+      if (projectId) {
+        await saveThread(projectId, [
+          { sender: 'user', text: userMessage },
+          { sender: 'ai', text: aiResponse }
+        ]);
+      }
     }
-    setIsLoading(false)
   }
 
-  const handleSendMessage = async () => {
-    if (inputMessage.trim() === '') return
+  const addMessage = async (sender: 'user' | 'ai', text: string, image?: string) => {
+    const newMessage: Message = { sender, text, image };
+    setMessages(prev => [...prev, newMessage]);
 
-    const newMessage: Message = {
-      id: Date.now(),
-      content: inputMessage,
-      sender: 'user',
-    }
+    if (projectId) {
+      const user = await getCurrentUser()
+      if (user) {
+        console.log('Attempting to save message:', { user_id: user.id, project_id: projectId, message: text, role: sender, image: image || null });
+        const { data, error } = await supabase
+          .from('ai_chat_history')
+          .insert({
+            user_id: user.id,
+            project_id: projectId,
+            message: text,
+            role: sender,
+            image: image || null
+          })
+          .select()
 
-    setMessages(prevMessages => [...prevMessages, newMessage])
-    setInputMessage('')
+        if (data && data[0]) {
+          newMessage.id = data[0].id
+          console.log('Message saved successfully:', data[0]);
+        }
 
-    if (!chatId) {
-      const { data, error } = await supabase
-        .from('ai_chat_history')
-        .insert({ user_id: (await supabase.auth.getUser()).data.user?.id, message: inputMessage, role: 'user' })
-        .select()
-
-      if (error) {
-        console.error('Error creating new chat:', error)
-        return
-      }
-
-      if (data && data[0]) {
-        setChatId(data[0].id)
-        router.push(`/chat?id=${data[0].id}`)
+        if (error) {
+          console.error('Error saving message:', error)
+        }
+      } else {
+        console.error('No user found when trying to save message');
       }
     } else {
-      await supabase
-        .from('ai_chat_history')
-        .insert({ id: chatId, user_id: (await supabase.auth.getUser()).data.user?.id, message: inputMessage, role: 'user' })
+      console.error('No projectId found when trying to save message');
     }
 
-    // Always respond with 'work in progress'
-    const aiResponse: Message = {
-      id: Date.now() + 1,
-      content: 'work in progress',
-      sender: 'ai',
-    }
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+      }
+    }, 100)
+  }
 
-    setMessages(prevMessages => [...prevMessages, aiResponse])
+  const saveThread = async (projectId: string | null, messages: Message[]) => {
+    if (!projectId) return;
 
-    if (chatId) {
-      supabase.auth.getUser().then(user => {
-        supabase
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    try {
+      for (const message of messages) {
+        const { error } = await supabase
           .from('ai_chat_history')
-          .insert({ id: chatId, user_id: user.data.user?.id, message: aiResponse.content, role: 'assistant' })
-          .then(undefined, (error) => {
-            console.error('Error inserting chat history:', error);
-          });
-      });
+          .insert({
+            user_id: user.id,
+            project_id: projectId,
+            message: message.text,
+            role: message.sender,
+          image: message.image || null
+        });
+
+        if (error) {
+          console.error('Error saving message:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving thread:', error);
     }
   }
 
-  const renderMessageContent = (content: string) => {
-    const parts = content.split(/(```[\s\S]*?```)/);
-    return parts.map((part, index) => {
-      if (part.startsWith('```') && part.endsWith('```')) {
-        const [, language, code] = part.match(/```(\w+)?\n?([\s\S]+?)```/) || [];
-        return (
-          <pre key={index} className="bg-gray-800 rounded-md p-4 my-2 overflow-x-auto">
-            <code className="text-sm font-mono text-gray-200">{code.trim()}</code>
-          </pre>
-        );
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target && typeof e.target.result === 'string') {
+        setPendingImage(e.target.result)
       }
-      return <p key={index}>{part}</p>;
-    });
-  };
+    }
+    reader.readAsDataURL(file)
+  }
 
-  if (isLoading) {
-    return <div>Loading...</div>
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file && file.type.startsWith('image/')) {
+      handleImageUpload(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
   }
 
   return (
     <AuthWrapper>
       <div className="flex h-screen bg-gray-100">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-8 overflow-hidden">
-          <Card className="w-full h-full mx-auto flex flex-col">
-            <CardHeader className="py-4">
-              <CardTitle>Chat with AI</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow overflow-hidden flex flex-col">
-              <ScrollArea className="flex-grow pr-4 mb-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === 'user' ? 'justify-end' : 'justify-start'
-                    } mb-4`}
-                  >
-                    <div
-                      className={`${
-                        message.sender === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      } rounded-lg px-4 py-2 max-w-[80%] shadow-md`}
-                    >
-                      {renderMessageContent(message.content)}
+        <main className="flex-1 p-8">
+          <Card className="w-full max-w-2xl mx-auto">
+            <div className="p-4 border-b">
+              <h2 className="text-2xl font-bold">{projectName}</h2>
+            </div>
+            <ScrollArea 
+              className="h-[500px] p-4" 
+              ref={chatContainerRef}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
+              {messages.map((message, index) => (
+                <div key={message.id || index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+                  <div className={`flex ${message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start`}>
+                    <Avatar className="w-8 h-8">
+                      {message.sender === 'user' ? (
+                        <AvatarFallback><User size={20} /></AvatarFallback>
+                      ) : (
+                        <AvatarFallback><Bot size={20} /></AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className={`mx-2 p-3 rounded-lg ${message.sender === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                      {message.text && <p className="mb-2">{message.text}</p>}
+                      {message.image && <img src={message.image} alt="Uploaded" className="max-w-xs rounded" />}
                     </div>
                   </div>
-                ))}
-              </ScrollArea>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  handleSendMessage()
-                }}
-                className="flex items-center space-x-2"
-              >
+                </div>
+              ))}
+            </ScrollArea>
+            <div className="p-4 border-t">
+              {pendingImage && (
+                <div className="mb-2 relative">
+                  <img src={pendingImage} alt="Pending upload" className="max-w-xs rounded" />
+                  <Button 
+                    size="icon" 
+                    variant="destructive" 
+                    className="absolute top-1 right-1" 
+                    onClick={() => setPendingImage(null)}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Remove image</span>
+                  </Button>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <Button 
+                  size="icon" 
+                  variant="outline" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImageIcon className="h-4 w-4" />
+                  <span className="sr-only">Upload image</span>
+                </Button>
                 <Input
-                  id="message"
-                  placeholder="Type your message here..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-grow"
+                  placeholder="Type a message..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 />
-                <Button type="submit" size="icon">
-                  <SendIcon className="h-4 w-4" />
+                <Button size="icon" onClick={handleSend}>
+                  <Send className="h-4 w-4" />
                   <span className="sr-only">Send</span>
                 </Button>
-              </form>
-            </CardContent>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => e.target.files && handleImageUpload(e.target.files[0])}
+              />
+            </div>
           </Card>
         </main>
       </div>
