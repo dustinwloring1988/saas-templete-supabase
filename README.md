@@ -49,7 +49,7 @@ This project is a Next.js application that includes a theme toggle feature, mult
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/dustinwloring1988/saas-template.git && cd saas-template
+   git clone https://github.com/dustinwloring1988/saas-template-supabase.git && cd saas-template-supabase
    ```
 
 2. Install dependencies:
