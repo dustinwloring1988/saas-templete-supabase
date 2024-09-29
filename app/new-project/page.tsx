@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Sidebar } from "@/components/Sidebar"
 import { useState } from "react"
+import { AuthWrapper } from "@/components/AuthWrapper"
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -45,53 +46,55 @@ export default function NewProjectPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <main className="flex-1 p-8">
-        <h2 className="text-2xl font-semibold mb-4">Create New Project</h2>
-        <Card className="w-[350px]">
-          <CardHeader>
-            <CardTitle>Create project</CardTitle>
-            <CardDescription>Deploy your new project in one-click.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="name">Name</Label>
-                  <Input 
-                    id="name" 
-                    placeholder="Name of your project" 
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                  />
+    <AuthWrapper>
+      <div className="flex h-screen bg-gray-100">
+        <Sidebar />
+        <main className="flex-1 p-8">
+          <h2 className="text-2xl font-semibold mb-4">Create New Project</h2>
+          <Card className="w-[350px]">
+            <CardHeader>
+              <CardTitle>Create project</CardTitle>
+              <CardDescription>Deploy your new project in one-click.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form>
+                <div className="grid w-full items-center gap-4">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="name">Name</Label>
+                    <Input 
+                      id="name" 
+                      placeholder="Name of your project" 
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="framework">Framework</Label>
+                    <Select value={framework} onValueChange={setFramework}>
+                      <SelectTrigger id="framework">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        <SelectItem value="next">Next.js</SelectItem>
+                        <SelectItem value="sveltekit">SvelteKit</SelectItem>
+                        <SelectItem value="astro">Astro</SelectItem>
+                        <SelectItem value="nuxt">Nuxt.js</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="framework">Framework</Label>
-                  <Select value={framework} onValueChange={setFramework}>
-                    <SelectTrigger id="framework">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                      <SelectItem value="next">Next.js</SelectItem>
-                      <SelectItem value="sveltekit">SvelteKit</SelectItem>
-                      <SelectItem value="astro">Astro</SelectItem>
-                      <SelectItem value="nuxt">Nuxt.js</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </form>
-            {error && (
-              <p className="text-sm text-red-500 mt-2">{error}</p>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline">Cancel</Button>
-            <Button onClick={handleDeploy}>Deploy</Button>
-          </CardFooter>
-        </Card>
-      </main>
-    </div>
+              </form>
+              {error && (
+                <p className="text-sm text-red-500 mt-2">{error}</p>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline">Cancel</Button>
+              <Button onClick={handleDeploy}>Deploy</Button>
+            </CardFooter>
+          </Card>
+        </main>
+      </div>
+    </AuthWrapper>
   )
 }

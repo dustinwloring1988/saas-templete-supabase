@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { forgotPassword } from '@/lib/supabase'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -24,16 +25,16 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Here you would typically make an API call to request a password reset
-    // For this example, we'll just simulate a successful request
     try {
-      // Simulating an API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const { data, error } = await forgotPassword(email)
       
-      // If the request is successful, show a success message
-      setSuccess(true)
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess(true)
+      }
     } catch (err) {
-      setError('Failed to send reset email. Please try again.')
+      setError('An unexpected error occurred. Please try again.')
     }
   }
 

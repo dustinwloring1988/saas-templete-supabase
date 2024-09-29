@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AuthWrapper } from "@/components/AuthWrapper"
 
 interface Message {
   id: number
@@ -208,137 +209,139 @@ This JavaScript code defines an asynchronous function to fetch user data from an
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <main className="flex-1 p-4 md:p-8 overflow-hidden">
-        <Card className="w-full h-full mx-auto flex flex-col">
-          <CardHeader className="py-4">
-            <CardTitle>Chat with AI</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-grow overflow-hidden flex flex-col md:flex-row gap-4">
-            <div className="flex-grow md:w-2/3 flex flex-col">
-              <ScrollArea className="flex-grow pr-4 mb-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === 'user' ? 'justify-end' : 'justify-start'
-                    } mb-4`}
-                  >
+    <AuthWrapper>
+      <div className="flex h-screen bg-gray-100">
+        <Sidebar />
+        <main className="flex-1 p-4 md:p-8 overflow-hidden">
+          <Card className="w-full h-full mx-auto flex flex-col">
+            <CardHeader className="py-4">
+              <CardTitle>Chat with AI</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-grow overflow-hidden flex flex-col md:flex-row gap-4">
+              <div className="flex-grow md:w-2/3 flex flex-col">
+                <ScrollArea className="flex-grow pr-4 mb-4">
+                  {messages.map((message) => (
                     <div
-                      className={`${
-                        message.sender === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      } rounded-lg px-4 py-2 max-w-[80%] shadow-md`}
+                      key={message.id}
+                      className={`flex ${
+                        message.sender === 'user' ? 'justify-end' : 'justify-start'
+                      } mb-4`}
                     >
-                      {renderMessageContent(message.content)}
+                      <div
+                        className={`${
+                          message.sender === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        } rounded-lg px-4 py-2 max-w-[80%] shadow-md`}
+                      >
+                        {renderMessageContent(message.content)}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </ScrollArea>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  handleSendMessage()
-                }}
-                className="flex items-center space-x-2"
-              >
-                <Input
-                  id="message"
-                  placeholder="Type your message here..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-grow"
-                />
-                <Button type="submit" size="icon">
-                  <SendIcon className="h-4 w-4" />
-                  <span className="sr-only">Send</span>
+                  ))}
+                </ScrollArea>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    handleSendMessage()
+                  }}
+                  className="flex items-center space-x-2"
+                >
+                  <Input
+                    id="message"
+                    placeholder="Type your message here..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    className="flex-grow"
+                  />
+                  <Button type="submit" size="icon">
+                    <SendIcon className="h-4 w-4" />
+                    <span className="sr-only">Send</span>
+                  </Button>
+                </form>
+              </div>
+              <div className="md:w-1/3 flex flex-col">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCodeSnippetsVisible(!isCodeSnippetsVisible)}
+                  className="mb-2 self-end"
+                >
+                  {isCodeSnippetsVisible ? 'Hide' : 'Show'} Snippets
                 </Button>
-              </form>
-            </div>
-            <div className="md:w-1/3 flex flex-col">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCodeSnippetsVisible(!isCodeSnippetsVisible)}
-                className="mb-2 self-end"
-              >
-                {isCodeSnippetsVisible ? 'Hide' : 'Show'} Snippets
-              </Button>
-              {isCodeSnippetsVisible && (
-                <Card className="flex-grow overflow-hidden">
-                  <CardHeader>
-                    <h3 className="text-lg font-semibold">Code Snippets</h3>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <ScrollArea className="h-[calc(100vh-300px)] w-full">
-                      <Tabs defaultValue="snippets" className="w-full">
-                        <TabsList className="w-full">
-                          <TabsTrigger value="snippets" className="flex-grow">Snippets</TabsTrigger>
-                          <TabsTrigger value="files" className="flex-grow">Files</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="snippets" className="p-4">
-                          {codeSnippets.map((snippet) => (
-                            <div key={snippet.id} className="mb-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-medium">{snippet.language}</span>
-                                <div className="flex items-center">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleSnippet(snippet.id)}
-                                  >
-                                    {expandedSnippets.has(snippet.id) ? (
-                                      <ChevronUpIcon className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDownIcon className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => copyToClipboard(snippet.content, snippet.id)}
-                                  >
-                                    {copiedId === snippet.id ? (
-                                      <CheckIcon className="h-4 w-4" />
-                                    ) : (
-                                      <CopyIcon className="h-4 w-4" />
-                                    )}
-                                  </Button>
+                {isCodeSnippetsVisible && (
+                  <Card className="flex-grow overflow-hidden">
+                    <CardHeader>
+                      <h3 className="text-lg font-semibold">Code Snippets</h3>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ScrollArea className="h-[calc(100vh-300px)] w-full">
+                        <Tabs defaultValue="snippets" className="w-full">
+                          <TabsList className="w-full">
+                            <TabsTrigger value="snippets" className="flex-grow">Snippets</TabsTrigger>
+                            <TabsTrigger value="files" className="flex-grow">Files</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="snippets" className="p-4">
+                            {codeSnippets.map((snippet) => (
+                              <div key={snippet.id} className="mb-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm font-medium">{snippet.language}</span>
+                                  <div className="flex items-center">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleSnippet(snippet.id)}
+                                    >
+                                      {expandedSnippets.has(snippet.id) ? (
+                                        <ChevronUpIcon className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronDownIcon className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => copyToClipboard(snippet.content, snippet.id)}
+                                    >
+                                      {copiedId === snippet.id ? (
+                                        <CheckIcon className="h-4 w-4" />
+                                      ) : (
+                                        <CopyIcon className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
+                                {expandedSnippets.has(snippet.id) && (
+                                  <pre className="bg-muted p-2 rounded text-sm overflow-x-auto">
+                                    <code>{snippet.content}</code>
+                                  </pre>
+                                )}
                               </div>
-                              {expandedSnippets.has(snippet.id) && (
-                                <pre className="bg-muted p-2 rounded text-sm overflow-x-auto">
-                                  <code>{snippet.content}</code>
-                                </pre>
-                              )}
-                            </div>
-                          ))}
-                        </TabsContent>
-                        <TabsContent value="files" className="p-4">
-                          {codeSnippets.map((snippet) => (
-                            <div key={snippet.id} className="mb-2 flex justify-between items-center">
-                              <span className="text-sm">{snippet.filename}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => downloadFile(snippet.filename, snippet.content)}
-                              >
-                                <DownloadIcon className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </TabsContent>
-                      </Tabs>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+                            ))}
+                          </TabsContent>
+                          <TabsContent value="files" className="p-4">
+                            {codeSnippets.map((snippet) => (
+                              <div key={snippet.id} className="mb-2 flex justify-between items-center">
+                                <span className="text-sm">{snippet.filename}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => downloadFile(snippet.filename, snippet.content)}
+                                >
+                                  <DownloadIcon className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </TabsContent>
+                        </Tabs>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    </AuthWrapper>
   )
 }

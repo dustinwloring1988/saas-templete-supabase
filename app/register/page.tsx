@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { signUp } from '@/lib/supabase'
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
@@ -31,14 +32,15 @@ export default function RegisterPage() {
       return
     }
 
-    // Here you would typically make an API call to register the user
-    // For this example, we'll just simulate a successful registration
     try {
-      // Simulating an API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const { data, error } = await signUp(email, password, { displayName, phone })
       
-      // If registration is successful, redirect to the login page
-      router.push('/login')
+      if (error) {
+        setError(error.message)
+      } else {
+        // Registration successful, redirect to the login page
+        router.push('/login')
+      }
     } catch (err) {
       setError('Registration failed. Please try again.')
     }
@@ -50,7 +52,7 @@ export default function RegisterPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
           <CardDescription className="text-center">
-            Enter your details to register for SaaS Templete
+            Enter your details to register for SaaS Template
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

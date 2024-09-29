@@ -11,8 +11,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Auth helper functions
-export const signUp = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signUp({ email, password })
+export const signUp = async (email: string, password: string, options: { displayName?: string, phone?: string }) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        display_name: options.displayName,
+        phone: options.phone
+      }
+    }
+  })
   return { data, error }
 }
 
@@ -105,3 +114,40 @@ export const getUserPromptCount = async (userId: string, timeframe: 'day' | 'mon
 
   return { count, error };
 };
+
+export const getApiKeys = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_api_keys')
+    .select('*')
+    .eq('user_id', userId);
+  return { data, error };
+};
+
+export const createApiKey = async (userId: string, name: string, expiresAt: string | null) => {
+  const apiKey = generateApiToken() // You'll need to implement this function
+  const { data, error } = await supabase
+    .from('user_api_keys')
+    .insert({
+      user_id: userId,
+      name,
+      api_key: apiKey,
+      is_active: true,
+    })
+    .select()
+
+  return { data, error }
+}
+
+export const deleteApiKey = async (id: string) => {
+  const { data, error } = await supabase
+    .from('user_api_keys')
+    .delete()
+    .match({ id })
+
+  return { data, error }
+}
+
+// Helper function to generate a secure API token
+const generateApiToken = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+}
