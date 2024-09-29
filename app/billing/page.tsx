@@ -5,8 +5,32 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check } from "lucide-react"
 import { Sidebar } from "@/components/Sidebar"
 import { AuthWrapper } from "@/components/AuthWrapper"
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function BillingPage() {
+  const [currentTier, setCurrentTier] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: subscription, error } = await supabase
+          .from('subscriptions')
+          .select('tier')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single()
+
+        if (subscription && !error) {
+          setCurrentTier(subscription.tier)
+        }
+      }
+    }
+
+    fetchSubscription()
+  }, [])
+
   const tiers = [
     {
       name: "Free",
@@ -42,7 +66,7 @@ export default function BillingPage() {
           <h2 className="text-3xl font-bold mb-10">Choose Your Plan</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {tiers.map((tier) => (
-              <Card key={tier.name} className={`flex flex-col ${tier.name === "Basic" ? "border-primary" : ""}`}>
+              <Card key={tier.name} className={`flex flex-col ${tier.name === currentTier ? "border-primary" : ""}`}>
                 <CardHeader>
                   <CardTitle className="text-2xl">{tier.name}</CardTitle>
                   <CardDescription className="text-3xl font-bold">{tier.price}/month</CardDescription>
@@ -59,8 +83,12 @@ export default function BillingPage() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" variant={tier.name === "Basic" ? "default" : "outline"}>
-                    Select {tier.name} Plan
+                  <Button 
+                    className="w-full" 
+                    variant={tier.name === currentTier ? "default" : "outline"}
+                    disabled={tier.name === currentTier}
+                  >
+                    {tier.name === currentTier ? "Current Tier" : `Select ${tier.name} Plan`}
                   </Button>
                 </CardFooter>
               </Card>

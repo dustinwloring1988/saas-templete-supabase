@@ -151,3 +151,17 @@ export const deleteApiKey = async (id: string) => {
 const generateApiToken = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
+
+export const createFreeSubscription = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .insert({
+      user_id: userId,
+      tier: 'Free',
+      status: 'active',
+      start_date: new Date().toISOString(),
+    })
+    .select()
+
+  return { data, error }
+}

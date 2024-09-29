@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { signUp } from '@/lib/supabase'
+import { signUp, createFreeSubscription } from '@/lib/supabase'
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
@@ -38,10 +38,25 @@ export default function RegisterPage() {
       if (error) {
         setError(error.message)
       } else {
-        // Registration successful, redirect to the login page
-        router.push('/login')
+        // Registration successful, create free tier subscription
+        const userId = data?.user?.id
+        if (userId) {
+          const { data: subscriptionData, error: subscriptionError } = await createFreeSubscription(userId)
+          if (subscriptionError) {
+            console.error('Error creating free subscription:', subscriptionError)
+            setError('Account created, but there was an issue setting up your subscription. Please contact support.')
+          } else {
+            console.log('Free subscription created:', subscriptionData)
+            // Redirect to the login page
+            router.push('/login')
+          }
+        } else {
+          console.error('User ID not available after registration')
+          setError('Account created, but there was an issue setting up your subscription. Please contact support.')
+        }
       }
     } catch (err) {
+      console.error('Unexpected error during registration:', err)
       setError('Registration failed. Please try again.')
     }
   }
